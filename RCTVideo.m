@@ -4,6 +4,10 @@
 #import "RCTEventDispatcher.h"
 #import "UIView+React.h"
 
+#import <MediaPlayer/MPNowPlayingInfoCenter.h>
+#import <MediaPlayer/MPMediaItem.h>
+#import <AVFoundation/AVFoundation.h>
+
 static NSString *const statusKeyPath = @"status";
 static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp";
 
@@ -34,6 +38,14 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
   BOOL _muted;
   BOOL _paused;
   BOOL _repeat;
+  BOOL _active;
+    
+  MPMediaItemArtwork *_albumArt;
+  NSString *_fileName;
+  NSString *_title;
+  NSString *_subtitle;
+  NSString *_imageUri;
+    
   NSString * _resizeMode;
 }
 
@@ -57,12 +69,55 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
                                                object:nil];
 
     [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(applicationWillEnterForeground:)
-                                                 name:UIApplicationWillEnterForegroundNotification
-                                               object:nil];
+                                               selector:@selector(applicationDidEnterBackground:)
+                                                   name:UIApplicationDidEnterBackgroundNotification
+                                                 object:nil];
+      
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                               selector:@selector(applicationWillEnterForeground:)
+                                                   name:UIApplicationWillEnterForegroundNotification
+                                                 object:nil];
+      
+    MPRemoteCommandCenter *remoteCommandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    remoteCommandCenter.pauseCommand.enabled = YES;
+    remoteCommandCenter.playCommand.enabled = YES;
+
   }
 
   return self;
+}
+
+- (void) updateInfoCenter {
+
+    Class playingInfoCenter = NSClassFromString(@"MPNowPlayingInfoCenter");
+    
+    if (playingInfoCenter) {
+        NSMutableDictionary *programInfo = [[NSMutableDictionary alloc] init];
+        [programInfo setObject:_title forKey:MPMediaItemPropertyTitle];
+        [programInfo setObject:_subtitle forKey:MPMediaItemPropertyAlbumTitle];
+        [programInfo setObject:_albumArt forKey:MPMediaItemPropertyArtwork];
+        [[MPNowPlayingInfoCenter defaultCenter] setNowPlayingInfo:programInfo];
+    }
+}
+
+- (void) updateNotificationCenter {
+    
+    // Not image, load default.
+    if(_imageUri == NULL) {
+        _albumArt = [[MPMediaItemArtwork alloc] initWithImage: [UIImage imageNamed:@"logo_vtx.png"]];
+        return;
+    }
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
+                   ^{
+                       NSURL *imageURL = [NSURL URLWithString:_imageUri];
+                       NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
+                       
+                       //This is your completion handler
+                       dispatch_sync(dispatch_get_main_queue(), ^{
+                           _albumArt = [[MPMediaItemArtwork alloc] initWithImage: [UIImage imageWithData:imageData]];
+                           [self updateInfoCenter];
+                       });
+                   });
 }
 
 - (AVPlayerViewController*)createPlayerViewController:(AVPlayer*)player withPlayerItem:(AVPlayerItem*)playerItem {
@@ -71,6 +126,23 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
     playerLayer.player = _player;
     playerLayer.view.frame = self.bounds;
     return playerLayer;
+}
+
+- (MPRemoteCommandHandlerStatus)playVideoFromRemote  {
+    NSLog(@"playVideoFromRemote.");
+    [_player play];
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+- (MPRemoteCommandHandlerStatus)pauseVideoFromRemote  {
+    NSLog(@"pauseVideoFromRemote.");
+    [_player pause];
+    return MPRemoteCommandHandlerStatusSuccess;
+}
+
+-(BOOL)canBecomeFirstResponder
+{
+    return YES;
 }
 
 /* ---------------------------------------------------------
@@ -110,10 +182,20 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
 
 - (void)applicationWillResignActive:(NSNotification *)notification
 {
+  /*
   if (!_paused) {
     [_player pause];
     [_player setRate:0.0];
   }
+  */
+}
+
+- (void)applicationDidEnterBackground:(NSNotification *)notification
+{
+    if (!_paused) {
+        [self stopProgressTimer];
+        [_player setRate:0.0];
+    }
 }
 
 - (void)applicationWillEnterForeground:(NSNotification *)notification
@@ -177,9 +259,16 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
 
 - (void)addPlayerItemObservers
 {
+  
+  NSLog(@"VTX Video: addPlayerItemObservers");
   [_playerItem addObserver:self forKeyPath:statusKeyPath options:0 context:nil];
   [_playerItem addObserver:self forKeyPath:playbackLikelyToKeepUpKeyPath options:0 context:nil];
   _playerItemObserversSet = YES;
+    
+  MPRemoteCommandCenter *remoteCommandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+  [[remoteCommandCenter pauseCommand] addTarget:self action:@selector(pauseVideoFromRemote)];
+  [[remoteCommandCenter playCommand] addTarget:self action:@selector(playVideoFromRemote)];
+    
 }
 
 /* Fixes https://github.com/brentvatne/react-native-video/issues/43
@@ -187,9 +276,15 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
  * observer set */
 - (void)removePlayerItemObservers
 {
+  NSLog(@"VTX Video: removePlayerItemObservers");
   if (_playerItemObserversSet) {
     [_playerItem removeObserver:self forKeyPath:statusKeyPath];
     [_playerItem removeObserver:self forKeyPath:playbackLikelyToKeepUpKeyPath];
+      
+    MPRemoteCommandCenter *remoteCommandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    [[remoteCommandCenter pauseCommand] removeTarget:self action:@selector(pauseVideoFromRemote)];
+    [[remoteCommandCenter playCommand] removeTarget:self action:@selector(playVideoFromRemote)];
+      
     _playerItemObserversSet = NO;
   }
 }
@@ -225,6 +320,11 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
                                                  @"type": [source objectForKey:@"type"],
                                                  @"isNetwork":[NSNumber numberWithBool:(bool)[source objectForKey:@"isNetwork"]]},
                                              @"target": self.reactTag}];
+    
+  [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayback error:nil];
+  [[AVAudioSession sharedInstance] setActive: YES error: nil];
+  [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:nil];
+    
 }
 
 - (AVPlayerItem*)playerItemForSource:(NSDictionary *)source
@@ -323,6 +423,20 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
     _playerLayer.videoGravity = mode;
   }
   _resizeMode = mode;
+}
+
+- (void)setActive:(BOOL)active
+{
+    NSLog(@"VTX Video: setActive %d",active);
+    _active = active;
+    if (_active) {
+        dispatch_time_t delay = dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * 1);
+        dispatch_after(delay, dispatch_get_main_queue(), ^(void){
+            [self addPlayerItemObservers];
+        });
+    } else {
+        [self removePlayerItemObservers];
+    }
 }
 
 - (void)setPaused:(BOOL)paused

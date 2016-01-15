@@ -125,6 +125,7 @@ Video.propTypes = {
   repeat: PropTypes.bool,
   paused: PropTypes.bool,
   muted: PropTypes.bool,
+  active: PropTypes.bool,
   volume: PropTypes.number,
   rate: PropTypes.number,
   controls: PropTypes.bool,

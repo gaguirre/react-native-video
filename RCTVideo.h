@@ -1,6 +1,7 @@
 #import "RCTView.h"
 #import <AVFoundation/AVFoundation.h>
 #import "AVKit/AVKit.h"
+#import <MediaPlayer/MediaPlayer.h>
 
 @class RCTEventDispatcher;
 

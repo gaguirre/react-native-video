@@ -193,7 +193,6 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
 - (void)applicationDidEnterBackground:(NSNotification *)notification
 {
     if (!_paused) {
-        [self stopProgressTimer];
         [_player setRate:0.0];
     }
 }

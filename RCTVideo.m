@@ -262,14 +262,15 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
 {
   
   NSLog(@"VTX Video: addPlayerItemObservers");
-  [_playerItem addObserver:self forKeyPath:statusKeyPath options:0 context:nil];
-  [_playerItem addObserver:self forKeyPath:playbackLikelyToKeepUpKeyPath options:0 context:nil];
-  _playerItemObserversSet = YES;
-    
-  MPRemoteCommandCenter *remoteCommandCenter = [MPRemoteCommandCenter sharedCommandCenter];
-  [[remoteCommandCenter pauseCommand] addTarget:self action:@selector(pauseVideoFromRemote)];
-  [[remoteCommandCenter playCommand] addTarget:self action:@selector(playVideoFromRemote)];
-    
+  if (!_playerItemObserversSet) {
+    [_playerItem addObserver:self forKeyPath:statusKeyPath options:0 context:nil];
+    [_playerItem addObserver:self forKeyPath:playbackLikelyToKeepUpKeyPath options:0 context:nil];
+    _playerItemObserversSet = YES;
+      
+    MPRemoteCommandCenter *remoteCommandCenter = [MPRemoteCommandCenter sharedCommandCenter];
+    [[remoteCommandCenter pauseCommand] addTarget:self action:@selector(pauseVideoFromRemote)];
+    [[remoteCommandCenter playCommand] addTarget:self action:@selector(playVideoFromRemote)];
+  }    
 }
 
 /* Fixes https://github.com/brentvatne/react-native-video/issues/43

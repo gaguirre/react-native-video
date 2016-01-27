@@ -430,7 +430,7 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
 {
     NSLog(@"VTX Video: setActive %d",active);
     _active = active;
-    if (_active) {
+   if (_active) {
         dispatch_time_t delay = dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * 1);
         dispatch_after(delay, dispatch_get_main_queue(), ^(void){
             [self addPlayerItemObservers];
@@ -438,7 +438,7 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
     } else {
         [self removePlayerItemObservers];
     }
- 
+} 
 
 - (void)setTitle:(NSString *)title
 {

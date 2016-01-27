@@ -192,11 +192,10 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
 
 - (void)applicationDidEnterBackground:(NSNotification *)notification
 {
-  /*
-    if (!_paused) {
+    if (!_paused && _muted) {
+        [_player pause];
         [_player setRate:0.0];
     }
-    */
 }
 
 - (void)applicationWillEnterForeground:(NSNotification *)notification
@@ -430,8 +429,7 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
 - (void)setActive:(BOOL)active
 {
     NSLog(@"VTX Video: setActive %d",active);
-    _active = active;
-    if (_active) {
+    if (active && !_active) {
         dispatch_time_t delay = dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC * 1);
         dispatch_after(delay, dispatch_get_main_queue(), ^(void){
             [self addPlayerItemObservers];
@@ -439,6 +437,26 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
     } else {
         [self removePlayerItemObservers];
     }
+    _active = active;
+}
+
+- (void)setTitle:(NSString *)title
+{
+    NSLog(@"VTX Video: setTitle %d",title);
+    _title = title;
+}
+
+- (void)setSubtitle:(NSString *)subtitle
+{
+    NSLog(@"VTX Video: setSubtitle %d",subtitle);
+    _subtitle = subtitle;
+}
+
+- (void)setImageUri:(NSString *)imageUri
+{
+    NSLog(@"VTX Video: setImageUri %d",imageUri);
+    _imageUri = imageUri;
+    [self updateNotificationCenter];
 }
 
 - (void)setPaused:(BOOL)paused
@@ -525,7 +543,9 @@ static NSString *const playbackLikelyToKeepUpKeyPath = @"playbackLikelyToKeepUp"
 
   [self setResizeMode:_resizeMode];
   [self setRepeat:_repeat];
-  [self setPaused:_paused];
+  if((!_paused && _player.rate < 0.5) || (_paused && _player.rate > 0.5)) {
+        [self setPaused:_paused];
+  }
   [self setControls:_controls];
 }
 

@@ -45,6 +45,10 @@ RCT_EXPORT_VIEW_PROPERTY(rate, float);
 RCT_EXPORT_VIEW_PROPERTY(seek, float);
 RCT_EXPORT_VIEW_PROPERTY(currentTime, float);
 
+RCT_EXPORT_VIEW_PROPERTY(title, NSString);
+RCT_EXPORT_VIEW_PROPERTY(subtitle, NSString);
+RCT_EXPORT_VIEW_PROPERTY(imageUri, NSString);
+
 - (NSDictionary *)constantsToExport
 {
   return @{

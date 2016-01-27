@@ -13,6 +13,7 @@ const VideoResizeMode = require('./VideoResizeMode');
 const styles = StyleSheet.create({
   base: {
     overflow: 'hidden',
+    backgroundColor: 'transparent',
   },
 });
 
@@ -136,6 +137,9 @@ Video.propTypes = {
   onProgress: PropTypes.func,
   onSeek: PropTypes.func,
   onEnd: PropTypes.func,
+  title: PropTypes.string,
+  subtitle: PropTypes.string,
+  imageUri: PropTypes.string,
   
   /* Required by react-native */
   scaleX: React.PropTypes.number,

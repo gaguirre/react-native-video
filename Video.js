@@ -1,14 +1,16 @@
-const React = require('react-native');
-const {
-  Component,
+import React, { 
+  Component, 
+  PropTypes
+} from 'react';
+
+import {
   StyleSheet,
   requireNativeComponent,
-  PropTypes,
   NativeModules,
   View,
-} = React;
+} from 'react-native';
 
-const VideoResizeMode = require('./VideoResizeMode');
+import VideoResizeMode from './VideoResizeMode.js';
 
 const styles = StyleSheet.create({
   base: {
@@ -17,11 +19,12 @@ const styles = StyleSheet.create({
   },
 });
 
-class Video extends Component {
+export default class Video extends Component {
 
   constructor(props, context) {
     super(props, context);
     this.seek = this.seek.bind(this);
+    this._assignRoot = this._assignRoot.bind(this);
     this._onLoadStart = this._onLoadStart.bind(this);
     this._onLoad = this._onLoad.bind(this);
     this._onError = this._onError.bind(this);
@@ -35,44 +38,58 @@ class Video extends Component {
   }
 
   seek(time) {
-    this.setNativeProps({ seek: parseFloat(time) });
+    this.setNativeProps({ seek: time });
+  }
+
+  _assignRoot(component) {
+    this._root = component;
   }
 
   _onLoadStart(event) {
-    this.props.onLoadStart && this.props.onLoadStart(event.nativeEvent);
+    if (this.props.onLoadStart) {
+      this.props.onLoadStart(event.nativeEvent);
+    }
   }
 
   _onLoad(event) {
-    this.props.onLoad && this.props.onLoad(event.nativeEvent);
+    if (this.props.onLoad) {
+      this.props.onLoad(event.nativeEvent);
+    }
   }
 
   _onError(event) {
-    this.props.onError && this.props.onError(event.nativeEvent);
+    if (this.props.onError) {
+      this.props.onError(event.nativeEvent);
+    }
   }
 
   _onProgress(event) {
-    this.props.onProgress && this.props.onProgress(event.nativeEvent);
+    if (this.props.onProgress) {
+      this.props.onProgress(event.nativeEvent);
+    }
   }
 
   _onSeek(event) {
-    this.props.onSeek && this.props.onSeek(event.nativeEvent);
+    if (this.props.onSeek) {
+      this.props.onSeek(event.nativeEvent);
+    }
   }
 
   _onEnd(event) {
-    this.props.onEnd && this.props.onEnd(event.nativeEvent);
+    if (this.props.onEnd) {
+      this.props.onEnd(event.nativeEvent);
+    }
   }
 
   render() {
     const {
-      style,
       source,
-      ref,
       resizeMode,
     } = this.props;
 
     let uri = source.uri;
     if (uri && uri.match(/^\//)) {
-      uri = 'file://' + uri;
+      uri = `file://${uri}`;
     }
 
     const isNetwork = !!(uri && uri.match(/^https?:/));
@@ -91,10 +108,10 @@ class Video extends Component {
 
     const nativeProps = Object.assign({}, this.props);
     Object.assign(nativeProps, {
-      style: [styles.base, style],
+      style: [styles.base, nativeProps.style],
       resizeMode: nativeResizeMode,
       src: {
-        uri: uri,
+        uri,
         isNetwork,
         isAsset,
         type: source.type || 'mp4',
@@ -109,8 +126,9 @@ class Video extends Component {
 
     return (
       <RCTVideo
-        ref={ component => this._root = component }
-        {...nativeProps} />
+        ref={this._assignRoot}
+        {...nativeProps}
+      />
     );
   }
 }
@@ -153,8 +171,6 @@ Video.propTypes = {
 const RCTVideo = requireNativeComponent('RCTVideo', Video, {
   nativeOnly: {
     src: true,
-    seek: true
+    seek: true,
   },
 });
-
-module.exports = Video;

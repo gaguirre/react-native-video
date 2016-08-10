@@ -112,14 +112,19 @@ static NSString *const playbackBufferEmptyKeyPath = @"playbackBufferEmpty";
     }
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0),
                    ^{
-                       NSURL *imageURL = [NSURL URLWithString:_imageUri];
-                       NSData *imageData = [NSData dataWithContentsOfURL:imageURL];
+                      NSError* error = nil;
+                      NSURL *imageURL = [NSURL URLWithString:_imageUri];
+                      NSData *imageData = [NSData dataWithContentsOfURL:imageURL options:NSDataReadingUncached error:&error];
                        
-                       //This is your completion handler
-                       dispatch_sync(dispatch_get_main_queue(), ^{
+                      if (error) {
+                          NSLog(@"%@", [error localizedDescription]);
+                      } else {
+                        //This is your completion handler
+                        dispatch_sync(dispatch_get_main_queue(), ^{
                            _albumArt = [[MPMediaItemArtwork alloc] initWithImage: [UIImage imageWithData:imageData]];
                            [self updateInfoCenter];
-                       });
+                        });
+                      }                       
                    });
 }
 
@@ -280,7 +285,7 @@ static NSString *const playbackBufferEmptyKeyPath = @"playbackBufferEmpty";
  * observer set */
 - (void)removePlayerItemObservers
 {
-  NSLog(@"VTX Video: removePlayerItemObservers");
+  NSLog(@"VTX Video: removePlayerItemObservers 1");
   if (_playerItemObserversSet) {
     [_playerItem removeObserver:self forKeyPath:statusKeyPath];
     [_playerItem removeObserver:self forKeyPath:playbackBufferEmptyKeyPath];
@@ -292,6 +297,7 @@ static NSString *const playbackBufferEmptyKeyPath = @"playbackBufferEmpty";
       
     _playerItemObserversSet = NO;
   }
+  NSLog(@"VTX Video: removePlayerItemObservers 2");
 }
 
 #pragma mark - Player and source
@@ -449,19 +455,19 @@ static NSString *const playbackBufferEmptyKeyPath = @"playbackBufferEmpty";
 
 - (void)setTitle:(NSString *)title
 {
-    NSLog(@"VTX Video: setTitle %d",title);
+    NSLog(@"VTX Video: setTitle %@",title);
     _title = title;
 }
 
 - (void)setSubtitle:(NSString *)subtitle
 {
-    NSLog(@"VTX Video: setSubtitle %d",subtitle);
+    NSLog(@"VTX Video: setSubtitle %@",subtitle);
     _subtitle = subtitle;
 }
 
 - (void)setImageUri:(NSString *)imageUri
 {
-    NSLog(@"VTX Video: setImageUri %d",imageUri);
+    NSLog(@"VTX Video: setImageUri %@",imageUri);
     _imageUri = imageUri;
     [self updateNotificationCenter];
 }
